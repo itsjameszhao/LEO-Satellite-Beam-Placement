@@ -1,32 +1,14 @@
-import random
-import math
-import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
+import unittest
+import satellite
+from test_utils import *
 
-def generateTestUsers(n, r):
-    # generate n evenly-spaced angles
-    angles = [(2*math.pi*i)/n for i in range(n)]
-    # generate n evenly-spaced inclinations
-    inclinations = [(math.pi*i)/(n-1) for i in range(n)]
-    # create list of (x, y, z) user coordinates
-    user_coords = [(r*math.sin(incl)*math.cos(ang), r*math.sin(incl)*math.sin(ang), r*math.cos(incl)) for incl in inclinations for ang in angles]
-    # shuffle user_coords
-    random.shuffle(user_coords)
-    return user_coords
+class TestSatellite(unittest.TestCase):
+    def test_add_users_can_connect(self):
+        # test code goes here
+        pass
 
-def generateTestSatellites(m, a, b):
-    # generate m random radii
-    radii = [random.uniform(a, b) for i in range(m)]
-    # generate m random angles
-    angles = [random.uniform(0, 2*math.pi) for i in range(m)]
-    # generate m random inclinations
-    inclinations = [math.acos(random.uniform(-1, 1)) for i in range(m)]
-    # create list of (x, y, z) satellite coordinates
-    satellite_coords = [(r*math.sin(incl)*math.cos(ang), r*math.sin(incl)*math.sin(ang), r*math.cos(incl)) for r, incl, ang in zip(radii, inclinations, angles)]
-    return satellite_coords
-
-def visualize_points(points):
-    fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
-    ax.scatter([p[0] for p in points], [p[1] for p in points], [p[2] for p in points])
-    plt.show()
+    def test_remove_conflicting_connections(self):
+        # test code goes here
+        pass
+    
+    # add more test methods as needed
