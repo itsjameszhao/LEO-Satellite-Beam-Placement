@@ -1,17 +1,22 @@
 import unittest
+import cProfile
+from pstats import Stats
 import numpy as np
 import pdb
 from satellite import *
 from test_utils import *
 
 class TestSatellite(unittest.TestCase):
-    def test_add_users_can_connect(self):
-        # test code goes here
-        pass
+    def setUp(self):
+        self.pr = cProfile.Profile()
+        self.pr.enable()
 
-    def test_remove_conflicting_connections(self):
-        # test code goes here
-        pass
+    def tearDown(self):
+        p = Stats(self.pr)
+        p.strip_dirs()
+        p.sort_stats('cumtime')
+        p.print_stats()
+        print("\n--->>>")
 
     def test_build_kdtree(self):
         points = [(1, 2, 3), (4, 5, 6), (7, 8, 9)]
@@ -198,28 +203,7 @@ class TestSatellite(unittest.TestCase):
         assert eligible_user in eligible_users
         assert non_eligible_user not in eligible_users
 
-        # # Test Case 2: Multiple users, all eligible
-        # user_coords = generateTestUsers(100, 10)
-        # satellite_coords = generateTestSatellites(1, 10, 20)
-        # manager = StarlinkManager(user_coords, satellite_coords)
-        # satellite = manager.satellites[0]
-        # eligible_users = manager.findSatelliteEligibleUsers(satellite)
-        # for user in eligible_users:
-        #     x, y, z = user_coords[manager.users.index(user)]
-        #     d = math.sqrt((satellite.x - x)**2 + (satellite.y - y)**2 + (satellite.z - z)**2)
-        #     incl = math.acos((satellite.z - z) / d)
-        #     ang = math.acos((x - satellite.x) / math.sqrt((x - satellite.x)**2 + (y - satellite.y)**2))
-        #     assert incl <= math.pi/4 and ang <= math.pi/4
-
-        # # Test Case 3: Multiple users, none eligible
-        # user_coords = generateTestUsers(100, 100)
-        # satellite_coords = generateTestSatellites(1, 10, 20)
-        # manager = StarlinkManager(user_coords, satellite_coords)
-        # satellite = manager.satellites[0]
-        # eligible_users = manager.findSatelliteEligibleUsers(satellite)
-        # assert len(eligible_users) == 0
-
-        # Test Case 4: Multiple users, some eligible
+        # Test Case 2: Multiple users, some eligible
         user_coords = generateTestUsers(100, 100)
         satellite_coords = generateTestSatellites(1, 100, 200)
         manager = StarlinkManager(user_coords, satellite_coords)
@@ -229,11 +213,45 @@ class TestSatellite(unittest.TestCase):
             user_normal_vector = user_coords[manager.users.index(user)]
             user_to_sat_vector = (satellite.x - user.x, satellite.y - user.y, satellite.z - user.z)
             user_angle = angle_between_vectors(user_normal_vector, user_to_sat_vector)
-            assert incl <= math.pi/4 and ang <= math.pi/4
+            assert user_angle <= math.pi/4
+
         non_eligible_users = set(manager.users) - set(eligible_users)
         for user in non_eligible_users:
-            user = user_coords[manager.users.index(user)]
-            d = math.sqrt((satellite.x - x)**2 + (satellite.y - y)**2 + (satellite.z - z)**2)
-            incl = math.acos((satellite.z - z) / d)
-            ang = math.acos((x - satellite.x) / math.sqrt((x - satellite.x)**2 + (y - satellite.y)**2))
-            assert incl > math.pi/4 or ang
+            user_normal_vector = (user.x, user.y, user.z)
+            user_to_sat_vector = (satellite.x - user.x, satellite.y - user.y, satellite.z - user.z)
+            user_angle = angle_between_vectors(user_normal_vector, user_to_sat_vector)
+            assert user_angle > math.pi/4
+
+    def test_randomInit(self):
+        num_satellites = 500
+        num_users = 500000
+        user_coords = generateTestUsers(int(math.sqrt(num_users)), 1)
+        satellite_coords = generateTestSatellites(num_satellites, 1.08, 1.09)
+        manager = StarlinkManager(user_coords, satellite_coords)
+        manager.randomInit()
+        
+        # Test 1: Every satellite has 32 connections and each connection has a color (one of red, blue, green, and yellow)
+        for satellite in manager.satellites:
+            assert len(satellite.current_connections) == 32
+            for connection in satellite.current_connections:
+                assert connection.color in Colors
+
+        # Test 2: There are 32 * num_satellites users with a satellite connection that is not none
+        users_with_connection = [user for user in manager.users if user.current_connection is not None]
+        assert len(users_with_connection) == num_satellites * 32
+
+        # Test 3: Each user that is connected is connected to only one satellite
+        connections_per_user = {}
+        for user in manager.users:
+            if user.current_connection is not None:
+                if user in connections_per_user:
+                    assert False, "User connected to multiple satellites"
+                connections_per_user[user] = user.current_connection
+        assert len(connections_per_user) == num_satellites * 32
+
+        # Test 4: No two connections among all the satellites are connected to the same user
+        connections = [connection for satellite in manager.satellites for connection in satellite.current_connections]
+        users = [connection.user for connection in connections]
+        assert len(set(users)) == len(users), "Two connections connected to the same user"
+
+

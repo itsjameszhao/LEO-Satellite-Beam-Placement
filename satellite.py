@@ -184,7 +184,7 @@ class StarlinkManager:
         # critical radius to query k-d tree, worked out using geometry
         critical_radius = math.sqrt(2) * self.d * math.sin(math.pi / 4 - math.asin(1/math.sqrt(2) * self.r / self.d))
         points = self.kdtree.ball_query((satellite.x, satellite.y, satellite.z),critical_radius)
-        return [self.point_to_user_mapping[point] for point in points]
+        return set(self.point_to_user_mapping[point] for point in points)
 
     def randomInit(self):
         for satellite in self.satellites:
@@ -192,7 +192,7 @@ class StarlinkManager:
             for _ in range(32):
                 unassigned_users = satellite.visible_users.intersection(self.unassigned_users)
                 if len(unassigned_users) == 0:
-                    continue
+                    break # break out of inner loop
                 # randomly select an unassigned user and assign a random color
                 user = random.choice(list(unassigned_users))
                 color = random.choice(list(Colors))
